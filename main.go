@@ -126,8 +126,12 @@ func gatherMetrics(next http.Handler) http.Handler {
 		start := time.Now()
 		defer func() {
 			ctx := chi.RouteContext(r.Context())
-			urlHitCount.With(prometheus.Labels{"method": ctx.RouteMethod, "url": ctx.RoutePatterns[0]}).Inc()
-			urlLatency.WithLabelValues(ctx.RouteMethod, ctx.RoutePatterns[0]).Observe(float64(time.Now().Sub(start).Milliseconds()))
+			url := "/"
+			if len(ctx.RoutePatterns) > 0 {
+				url = ctx.RoutePatterns[0]
+			}
+			urlHitCount.With(prometheus.Labels{"method": ctx.RouteMethod, "url": url}).Inc()
+			urlLatency.WithLabelValues(ctx.RouteMethod, url).Observe(float64(time.Now().Sub(start).Milliseconds()))
 		}()
 
 		next.ServeHTTP(w, r)
@@ -140,8 +144,8 @@ func ListArticles(w http.ResponseWriter, r *http.Request) {
 
 	// TODO Remove this, just added for testing
 	// Sleep between 0 and 1000 milliseconds
-	rand.Seed(time.Now().UnixNano())
-	time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
+	// rand.Seed(time.Now().UnixNano())
+	// time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 
 	if err := render.RenderList(w, r, NewArticleListResponse(articles)); err != nil {
 		render.Render(w, r, ErrRender(err))
